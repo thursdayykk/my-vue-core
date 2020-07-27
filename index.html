@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <script src="./Observer.js"></script>
+    <script src="./Watcher.js"></script>
+    <script src="./Dep.js"></script>
+    <script>
+      // 拦截数组
+      const arrayProto = Array.prototype
+      const arrayMethods = Object.create(arrayProto)
+      ;['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'].forEach(
+        (method) => {
+          // 缓存原生方法
+          const original = arrayProto[method]
+          def(arrayMethods, method, function mutator(...args) {
+            const result = original.apply(this, args)
+            const ob = this.__ob__
+            let inserted
+            switch (method) {
+              case 'push':
+              case 'unshift':
+                inserted = args // 取出新增元素
+                break
+              case 'splice':
+                inserted = args.splice(2) // 取出新增元素
+                break
+            }
+            // 转换成响应式
+            if (inserted) ob.observeArray(inserted)
+            ob.dep.notify() // 通知依赖
+            return result
+          })
+        }
+      )
+      const hasProto = '__proto__' in {}
+      const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
+      function protoAugment(target, src, keys) {
+        target.__proto__ = src
+      }
+      function copyAugment(target, src, keys) {
+        /**
+         * 若浏览器不支持__proto__
+         * 会在数组上挂载一些方法（访问对象的属性，当自身不存在时，才会访问原型上的）
+         */
+        for (let i = 0, l = keys.length; i < l; i++) {
+          const key = keys[i]
+          def(target, key, src[key])
+        }
+      }
+    </script>
+  </body>
+</html>
